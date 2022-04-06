@@ -38,7 +38,7 @@ q0 = 0;
 li0 = sqrt(m*g/(Arotor*2*rho))/vtip;
 x0 = 15;
 z0 = 18;
-deltapitch0 = 0;
+deltah0 = 0;
 cdot0 = 0;
 
 t(1) = t0;
@@ -48,12 +48,12 @@ pitch(1) = pitch0;
 q(1) = q0;
 x(1) = x0;
 z(1) = z0;
-deltapitch(1) = deltapitch0;
+deltah(1) = deltah0;
 cdot(1) = cdot0;
 
 %li(1) = li0;
 
-dt = 0.01; T = 40; t = [t0:dt:T]; N = length(t);
+dt = 0.01; T = 20; t = [t0:dt:T]; N = length(t);
 li = zeros(N, 1);
 li(1) = li0;
 
@@ -62,11 +62,13 @@ cyclic(1) = deg2rad(0);
 
 % ALTITUDE HOLD GAINS
 c_des = 0;
-Kp_c = 0.2;
-Ki_c = 0.2;
-Kd_c = 10000;
-Kp_cdes = 0.1;
-z_des = 8; 
+h_des = -8; 
+
+KaltP = 0.2;
+KaltD = 0.2;
+KaltI = 0.2;
+KcdesP = 0.2;
+z_des = -8;
 
 for i= 1:N
    
@@ -79,17 +81,16 @@ for i= 1:N
      
     % VERTICAL SPEED CONTROLLER
     c(i) = u(i)*sin(pitch(i))-w(i)*cos(pitch(i));
-    %c_des = Kp_cdes * (z_des - z(i));
+    c_des = KcdesP * (z_des - z(i));
     
     % COLLECTIVE CONTROLLER -- AKA ALTITUDE CONTROLLER
-    if t(i)>=15
-        collective(i) = 5 + Kp_c*(c_des-c(i));
-        %collective(i) = deg2rad(collective_deg);
-    end
+    %e(i) = z_des-z(i);
     
-    if t(i)>=15     % disregard deze, dit is die met pitch, ma ge kunt de D en I parts gebruiken
-        %pitch_deg(i) = 2 + Kp_c*(c_des-c(i))% + Ki_c*deltapitch(i) + Kd_c*gradient((c_des-c(i)));
-        %pitch(i) = deg2rad(pitch_deg(i));
+    h(i)=-z(i);
+    
+    if t(i)>=0
+        collective_deg(i) = 1 + KaltP*(h_des-h(i)) + KaltD*c(i);% + KaltI*deltah(i) ;
+        collective(i) = deg2rad(collective_deg(i));
     end
     
     % CALCULATE DIMENSIONLESS PITCH RATE AND SPEED
@@ -141,10 +142,10 @@ for i= 1:N
     qdot(i) = -T(i)*y_cg/Iy*sin(cyclic_min_a1(i));
     pitchdot(i) = q(i);
     
-    deltapitchdot(i) = c_des - c(i);
+    deltahdot(i) = c_des - c(i);
     
     xdot(i) = u(i)*cos(pitch(i))+w(i)*sin(pitch(i));
-    zdot(i) = c(i);
+    zdot(i) = -c(i);
     
     % EULER INTEGRATION FOR DISCRETE TIME-SERIES OF EOM
     %u(i+1) = u(i) + dt*udot(i);        % comment deze uit als ge
@@ -156,8 +157,7 @@ for i= 1:N
     pitch(i+1) = pitch(i) + dt*pitchdot(i);
     
     collective(i+1) = collective(i) + dt*gradient(collective(i));
-    
-    deltapitch(i+1) = deltapitch(i) + dt*deltapitchdot(i);
+    deltah(i+1) = deltah(i) + dt*deltahdot(i);
     
     x(i+1) = x(i) + dt*xdot(i);
     z(i+1) = z(i) + dt*zdot(i);
@@ -173,7 +173,8 @@ z(end) = [];
 collective(end) = [];
 
 % PLOTS FOR ALTITUDE CONTROLLER
-plot(t, z, t, collective, t, c), legend('altitude', 'collective', 'climb rate')
+plot(t, z, t, -c, t, rad2deg(collective)), legend('altitude', 'climb rate', 'collective')
+%plot(t, rad2deg(collective)), legend('collective')
 
 % ik heb hier alles uitgecomment om gwn diegene te plotten die id andere
 % report staan

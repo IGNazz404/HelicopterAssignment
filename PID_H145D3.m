@@ -2,31 +2,33 @@
 %0.5 SEC<T<1 SEC. Now from the 15th second a PD controller becomes active 
 clear
 %INITIAL DATA HELICOPTER
-g=9.81;	
-cla=5.7; %NACA 0012
-volh=.075;	%blade solidity	
+g=9.80665;	
+cla=rad2deg(0.1); %NACA 0012
+volh=.0757;	%blade solidity	
 lok=6;
-cds=1.5;
-mass=2200;
-rho=1.225;
-vtip=200;
-diam=2*7.32;
-iy=10615;
-mast=1;
+cds=1.9;
+mass=2200;      % VERANDER DEZE
+rho=1.225;      % VERANDER DEZE
+vtip=200;       % VERANDER DEZE
+diam=10.8;
+iy=15000;
+mast=2.1;
 omega=vtip/(diam/2);
 area=pi/4*diam^2;
 tau=.1;		%time constant in dynamiCs inflow!!!
-collect(1)=6*pi/180;
+
+collect(1)=10*pi/180;
 longit(1)=0*pi/180;
 
 %initial values;
 t0=0;
-u0=0;
+u0=0;     % 6kts to m/s
 w0=0;
 q0=0;
 pitch0=0*pi/180;
 x0=0;
 labi0=sqrt(mass*g/(area*2*rho))/vtip;
+deltah0=0;
 
 t(1)=t0;
 u(1)=u0;
@@ -36,27 +38,50 @@ pitch(1)=pitch0;
 x(1)=x0;
 labi(1)=labi0;
 z(1)=0;
+deltah(1)=deltah0;
 
 %INTEGRATION 
 aantal=800;
 teind=80;
 stap=(teind-t0)/aantal;
 
+%CONTROLLER PARAMETERS
+cdes=0;
+pitchdes=0;
+
+KcollP=0.2;
+KcollI=5;
+
+hdes=10;  % DESIRED HEIGHT 3 m (=10ft)
+Kcdes=0.2;
+
+KcycP=0.3;
+KcycD=0.1;
+
+xdes=5;
+Kpitchdes=-0.006;
+
 for i=1:aantal 
-   if t(i)>=0.5 & t(i)<=1 longit(i)=1*pi/180;
-   else longit(i)=0*pi/180;
-   end
     
-   if t(i)>=15 longitgrd(i) = .2*pitch(i)*180/pi+ .2*q(i)*180/pi;%PD in deg
+c(i)=u(i)*sin(pitch(i))-w(i)*cos(pitch(i));
+h(i)=-z(i);
+   
+   if t(i)>=0
+       % CYCLIC CONTROLLER
+       pitchdes = Kpitchdes*(xdes-x(i)) + 0.02*u(i);
+       longitgrd(i) = KcycP*(pitch(i)-pitchdes)*180/pi + KcycD*q(i)*180/pi;%PD in deg
        longit(i)=longitgrd(i)*pi/180;	%in rad
+       
+       % COLLECTIVE CONTROLLER
+       cdes = Kcdes*(hdes-h(i));
+       collectgrd(i)=5+KcollP*(cdes-c(i))+KcollI*deltah(i);
+       collect(i)=deg2rad(collectgrd(i));
+   else 
+       longit(i)=longit(1);
+       collect(i)=collect(1);
    end    
    %longit(i)=longitgrd(i)*pi/180;	%in rad
    
-%NO LAW FOR COLLECTIVE
-
-c(i)=u(i)*sin(pitch(i))-w(i)*cos(pitch(i));
-h(i)=-z(i);
-collect(i)=collect(1);
 
 %Defining the differential equations
 
@@ -111,6 +136,8 @@ labidot(i)=(ctelem(i)-ctglau(i))/tau;
 %corrdot(i)=uwens-u(i);
 %corrcdot(i)=cwens(i)-c(i);
 
+deltahdot(i) = cdes - c(i);     % ADD STATE FOR REMOVING STEADY-STATE w ERROR
+
 u(i+1)=u(i)+stap*udot(i);
 w(i+1)=w(i)+stap*wdot(i);
 q(i+1)=q(i)+stap*qdot(i);
@@ -119,15 +146,11 @@ x(i+1)=x(i)+stap*xdot(i);
 labi(i+1)=labi(i)+stap*labidot(i);
 z(i+1)=z(i)+stap*zdot(i);
 t(i+1)=t(i)+stap;
+deltah(i+1) = deltah(i) + stap*deltahdot(i);  % ADD STATE FOR REMOVING STEADY-STATE w ERROR
 end;
 
-plot(t,u),xlabel('t (s)'),ylabel('u(m)'),grid,pause;
-plot(t,pitch*180/pi),xlabel('t (s)'),ylabel('pitch(deg)'),grid,pause;
-plot(t,x),xlabel('t (s)'),ylabel('x(m)'),grid,pause;
-plot(t,w),xlabel('t (s)'),ylabel('w(m)'),grid,pause;
-plot(t,q),xlabel('t (s)'),ylabel('q(m)'),grid,pause; 
-plot(t,labi),xlabel('t (s)'),ylabel('labi(m)'),grid,pause;
-plot(t,-z),xlabel('t (s)'),ylabel('h(m)'),grid,pause;
-plot(t(1:800),longit*180/pi),xlabel('t (s)'),ylabel('longit grd'),grid,pause;
-
+plot(t(1:800), rad2deg(longit), t, x,t, u),...
+    legend('Cyclic [deg]', 'Longitudinal Position [m]', 'Longitudinal Velocity u [m/s]'), grid, pause
+plot(t(1:800),rad2deg(collect), t, -z, t, w),...
+    legend('Collective [deg]', 'Height [m]', 'Vertical Velocity w [m/s]'), grid, pause
 

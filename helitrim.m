@@ -28,6 +28,7 @@ coeff = [4  8*mu*sin(D/W)   4*mu^2 0 -CT^2];
 r = roots(coeff);
 r_real =r(r>=0);
 lambda_i = r_real;
+sol = lambda_i;
 
 A = [1+3/2*mu^2     -8/3*mu;
      -mu            2/3+mu^2];
@@ -42,3 +43,7 @@ a1 = x_lst(1,:);
 theta0 = x_lst(2,:);
 
 plot(V_lst, a1, V_lst, theta0)
+
+save dumpfile a1 theta0
+clear
+load dumpfile
