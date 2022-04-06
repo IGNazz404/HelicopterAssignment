@@ -36,12 +36,20 @@ w0 = 0;
 pitch0 = deg2rad(0);
 q0 = 0;
 li0 = sqrt(m*g/(Arotor*2*rho))/vtip;
+x0 = 15;
+z0 = 18;
+deltapitch0 = 0;
+cdot0 = 0;
 
 t(1) = t0;
 u(1) = u0;
 w(1) = w0;
 pitch(1) = pitch0;
 q(1) = q0;
+x(1) = x0;
+z(1) = z0;
+deltapitch(1) = deltapitch0;
+cdot(1) = cdot0;
 
 %li(1) = li0;
 
@@ -52,17 +60,37 @@ li(1) = li0;
 collective(1) = deg2rad(6);
 cyclic(1) = deg2rad(0);
 
+% ALTITUDE HOLD GAINS
+c_des = 0;
+Kp_c = 0.2;
+Ki_c = 0.2;
+Kd_c = 10000;
+Kp_cdes = 0.1;
+z_des = 8; 
+
 for i= 1:N
    
     % SIMULATE A 1 DEG CYCLIC INPUT BETWEEN 0.5s AND 1s
     if t(i)>= 0.5 & t(i) <= 1
-        cyclic(i) = deg2rad(1);
+        cyclic(i) = deg2rad(-1);
     else
         cyclic(i) = deg2rad(0);
     end
+     
+    % VERTICAL SPEED CONTROLLER
+    c(i) = u(i)*sin(pitch(i))-w(i)*cos(pitch(i));
+    %c_des = Kp_cdes * (z_des - z(i));
     
-    % COLLECTIVE REMAINS CONSTANT
-    collective(i) = collective(1); 
+    % COLLECTIVE CONTROLLER -- AKA ALTITUDE CONTROLLER
+    if t(i)>=15
+        collective(i) = 5 + Kp_c*(c_des-c(i));
+        %collective(i) = deg2rad(collective_deg);
+    end
+    
+    if t(i)>=15     % disregard deze, dit is die met pitch, ma ge kunt de D en I parts gebruiken
+        %pitch_deg(i) = 2 + Kp_c*(c_des-c(i))% + Ki_c*deltapitch(i) + Kd_c*gradient((c_des-c(i)));
+        %pitch(i) = deg2rad(pitch_deg(i));
+    end
     
     % CALCULATE DIMENSIONLESS PITCH RATE AND SPEED
     qdiml(i) = q(i)/omega;
@@ -88,7 +116,7 @@ for i= 1:N
     % CALCULATE a1
     numerator_a1(i) = -16/lok*qdiml(i)+8/3*mu(i)*collective(i)-...
                       2*mu(i)*(lc(i)+li(i));
-    a1(i) = numerator_a1(i)/(1-0.5*mu(i)^2);   % van waar komt deze formule?
+    a1(i) = numerator_a1(i)/(1-0.5*mu(i)^2);
     
     % TRHUST COEFFICIENTS
         % THRUST COEFFICIENT BEM
@@ -113,11 +141,26 @@ for i= 1:N
     qdot(i) = -T(i)*y_cg/Iy*sin(cyclic_min_a1(i));
     pitchdot(i) = q(i);
     
+    deltapitchdot(i) = c_des - c(i);
+    
+    xdot(i) = u(i)*cos(pitch(i))+w(i)*sin(pitch(i));
+    zdot(i) = c(i);
+    
     % EULER INTEGRATION FOR DISCRETE TIME-SERIES OF EOM
-    u(i+1) = u(i) + dt*udot(i);
+    %u(i+1) = u(i) + dt*udot(i);        % comment deze uit als ge
+    %horizontal motions wilt locken
+        % locking horizontal motions
+    u(i+1) = u(i);
     w(i+1) = w(i) + dt*wdot(i);
     q(i+1) = q(i) + dt*qdot(i);
-    pitch(i+1) =pitch(i) + dt*pitchdot(i);
+    pitch(i+1) = pitch(i) + dt*pitchdot(i);
+    
+    collective(i+1) = collective(i) + dt*gradient(collective(i));
+    
+    deltapitch(i+1) = deltapitch(i) + dt*deltapitchdot(i);
+    
+    x(i+1) = x(i) + dt*xdot(i);
+    z(i+1) = z(i) + dt*zdot(i);
     
 end
 
@@ -125,15 +168,27 @@ u(end) = [];
 pitch(end) = [];
 w(end) = [];
 q(end) = [];
+x(end) = [];
+z(end) = [];
+collective(end) = [];
 
-plot(t, rad2deg(cyclic))
-xlabel('t (s)')
-ylabel('longit grd - cyclic angle')
-grid 
-pause
+% PLOTS FOR ALTITUDE CONTROLLER
+plot(t, z, t, collective, t, c), legend('altitude', 'collective', 'climb rate')
 
+% ik heb hier alles uitgecomment om gwn diegene te plotten die id andere
+% report staan
 
-plot(t,u, t,rad2deg(pitch)),xlabel('t [s]'),ylabel('u [m/s]'), ylabel('pitch [deg]'),grid,pause;
-%plot(t,x),xlabel('t (s)'),ylabel('x(m)'),grid,pause;
-plot(t,w),xlabel('t (s)'),ylabel('w(m)'),grid,pause;
-plot(t,q),xlabel('t (s)'),ylabel('q(m)'),grid,pause; 
+%plot(t, gradient(c)), pause
+%plot(t, c),ylabel('climb rate [m/s]'), xlabel('t [s]'), legend('climb rate'), pause
+%plot(t, rad2deg(cyclic)), xlabel('t (s)'), ylabel('longit grd - cyclic angle')
+%grid, legend('cyclic'), pause
+%plot(t,u, t,rad2deg(pitch)),xlabel('t [s]'),ylabel('u [m/s]'), ylabel('pitch [deg]'),grid;
+%legend('u', 'pitch'), pause
+%plot(t,w),xlabel('t (s)'),ylabel('w(m)'),grid;
+%legend('w'), pause
+%plot(t,q),xlabel('t (s)'),ylabel('q(m)'),grid;
+%legend('q'), pause
+%plot(t, z), xlabel('t(s)'), ylabel('height [m]'),grid;
+%legend('z') , pause
+%plot(t, x), xlabel('t(s)'), ylabel('horizontal position [m]'),grid;
+%legend('x'), pause
