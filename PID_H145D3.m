@@ -3,19 +3,25 @@
 clear
 %INITIAL DATA HELICOPTER
 g=9.80665;	
-cla=rad2deg(0.1); %NACA 0012
-volh=.0757;	%blade solidity	
-lok=6;
+cla=rad2deg(0.1);   %NACA 0012
+
+
 cds=1.9;
-mass=2200;      % VERANDER DEZE
-rho=1.225;      % VERANDER DEZE
-vtip=200;       % VERANDER DEZE
+mass=3010;          % JUIST NU
+rho=1.225;          % VERANDER DEZE
+omega=38.94;
 diam=10.8;
+R = diam/2;
+chord = 0.257;
+N=5;                % number of blades
 iy=15000;
+I_blade=934.94/5;
 mast=2.1;
-omega=vtip/(diam/2);
+vtip=omega*R;           % JUIST NU
 area=pi/4*diam^2;
-tau=.1;		%time constant in dynamiCs inflow!!!
+tau=0.1;            %time constant in dynamics inflow!!!
+lok=rho*cla*chord*R^4/I_blade;
+volh=N*chord/(pi*R);       %rotot solidity	
 
 collect(1)=10*pi/180;
 longit(1)=0*pi/180;
@@ -150,7 +156,6 @@ deltah(i+1) = deltah(i) + stap*deltahdot(i);  % ADD STATE FOR REMOVING STEADY-ST
 end;
 
 plot(t(1:800), rad2deg(longit), t, x,t, u),...
-    legend('Cyclic [deg]', 'Longitudinal Position [m]', 'Longitudinal Velocity u [m/s]'), grid, pause
-plot(t(1:800),rad2deg(collect), t, -z, t, w),...
-    legend('Collective [deg]', 'Height [m]', 'Vertical Velocity w [m/s]'), grid, pause
-
+    legend('Cyclic [deg]', 'Longitudinal Position [m]', 'Longitudinal Velocity u [m/s]'), grid
+% plot(t(1:800),rad2deg(collect), t, -z, t, w),...
+%     legend('Collective [deg]', 'Height [m]', 'Vertical Velocity w [m/s]'), grid
