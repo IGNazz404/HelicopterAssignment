@@ -49,7 +49,7 @@ deltah(1)=deltah0;
 
 %INTEGRATION 
 aantal=800;
-teind=40;
+teind=80;
 stap=(teind-t0)/aantal;
 
 %CONTROLLER PARAMETERS
@@ -62,8 +62,8 @@ xdes=15;
 
 % Vertical Control Parameters
 Kcdes=0.1;
-KcollP=2;
-KcollI=3.1;
+KcollP=0.8;
+KcollI=4;
 cdes=0;
 hdes=3;  % DESIRED HEIGHT 3 m (=10ft)
 
@@ -156,9 +156,6 @@ deltah(i+1) = deltah(i) + stap*deltahdot(i);  % ADD STATE FOR REMOVING STEADY-ST
 end;
 
 plot(t(1:800), rad2deg(longit), t, x,t, u),...
-    legend('Cyclic [deg]', 'Longitudinal Position [m]', 'Longitudinal Velocity u [m/s]'),...
-    , xlabel('Time [s]'),grid, pause
+    legend('Cyclic [deg]', 'Longitudinal Position [m]', 'Longitudinal Velocity u [m/s]'), grid, pause
 plot(t(1:800),rad2deg(collect), t, -z, t, w),...
-    legend('Collective [deg]', 'Height [m]', 'Vertical Velocity w [m/s]'),... 
-    grid, axis([0 10 -2 16]), xlabel('Time [s]'), pause
-plot(t(1:800), thrust)
+    legend('Collective [deg]', 'Height [m]', 'Vertical Velocity w [m/s]'), grid

@@ -49,7 +49,8 @@ a1 = trim_values(1,:);
 theta0 = trim_values(2,:);
 
 plot(V_lst, rad2deg(a1), V_lst, rad2deg(theta0))
-legend('a1=\theta_c', '\theta_0')
+legend('Cyclic angle a1=\theta_c', 'Collective angle \theta_0')
+ylabel('Angle [deg]'), xlabel('Airspeed [m/s]')
 
 save dumpfile a1 theta0 Cla sigma
 clear
